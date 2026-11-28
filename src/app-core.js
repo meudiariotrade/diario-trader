@@ -25348,6 +25348,8 @@ const IC = (e) =>
     const v = window.DiarioMarketData?.has(key)&&!window.DIARIO_DEMO ? live : live || n[key];
     return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
   };
+  /* Etapa 1: preços do ticker com separador de milhar (59.719,91), igual aos cards. */
+  const pxTape = (x) => Number(x).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const i = ([key, nome]) => {
     const v = ativo(key);
     if (!v) return "";
@@ -25357,7 +25359,7 @@ const IC = (e) =>
     const classe = positivo ? "up" : "dn";
     const seta = m == null ? "" : positivo ? "▲" : "▼";
     const percentual = m == null ? "—" : (positivo ? "+" : "") + f2(m) + "%";
-    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${f2(v.px)} <b>${percentual}</b></span>`;
+    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${pxTape(v.px)} <b>${percentual}</b></span>`;
   };
   function l() {
     if (document.hidden) return;
@@ -26931,6 +26933,14 @@ function irExteriorHtml(ano, num) {
     : `<p class="mut sm">Nenhuma venda de ativo no exterior em ${ano}. Se vender, o ganho entra aqui: 15% na declaração anual, sem a isenção de R$ 20 mil.</p>`;
   return h;
 }
+/* v1054: Enter no e-mail ou na senha envia o login/cadastro (antes só o clique funcionava). */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.isComposing) return;
+  const t = e.target;
+  if (!t || (t.id !== "ce" && t.id !== "cp")) return;
+  const b = document.querySelector('[data-a="auth"]');
+  if (b) { e.preventDefault(); b.click(); }
+});
 function render0() {
   window.DiarioCiclos?.enter(tab);
   if (typeof SCA !== "undefined" && SCA && (tab !== "swing" || VW.S !== "sc")) {
@@ -33680,11 +33690,17 @@ function vStats() {
     );
   let f = "";
   if (ST.aba === "geral") {
+    /* v1054: "Onde você ganha e onde perde" com os trades do período/tipo escolhidos. */
+    let og1054 = "";
+    try {
+      if (window.DiarioOndeGanho && typeof dshRegistro === "function")
+        og1054 = window.DiarioOndeGanho.html(n.rows.map(dshRegistro).filter(Boolean));
+    } catch {}
     const x = n.dias.slice(-20);
     let v = -1 / 0;
     const g = n.curvaPL.map((b) => ((v = Math.max(v, b)), b - v)),
       h = n.rows.slice(-30);
-    f = `<h2>Evolução do resultado</h2>${lineChart("eq", n.curvaPL, m, (b) => s(b))}<h2>Recuos da conta</h2>${lineChart("dd", g, m, (b) => o(b))}<div class="sm mut">Quanto o resultado acumulado caiu em relação ao melhor momento anterior.</div><h2>Resultado por dia</h2>${barChart(
+    f = og1054 + `<h2>Evolução do resultado</h2>${lineChart("eq", n.curvaPL, m, (b) => s(b))}<h2>Recuos da conta</h2>${lineChart("dd", g, m, (b) => o(b))}<div class="sm mut">Quanto o resultado acumulado caiu em relação ao melhor momento anterior.</div><h2>Resultado por dia</h2>${barChart(
       "dia",
       x.map((b) => b.pl),
       x.map((b) => b.k.slice(8) + "/" + b.k.slice(5, 7)),
@@ -41346,16 +41362,11 @@ function mtAviso() {
   };
 }
 const FN_VERSAO = "v90",
+  /* v1054: cotações, notícias, ADRs, juros, candles e sentimento já rodam na Cloudflare. */
   FN_LISTA = [
-    ["precos", "Cotações das posições abertas"],
     ["screener", "Faixa de preços do topo e Screener"],
-    ["noticias", "Notícias"],
     ["notificar", "Notificações"],
-    ["adrs", "ADRs no Início"],
-    ["juros", "Juros"],
-    ["candles", "Gráficos dos trades e Ao vivo"],
     ["macro", "Mundo"],
-    ["sentimento", "Sentimento"],
     ["radar", "Radar"],
     ["analise", "Análise com IA"],
     ["resumo", "Resumo de livros"],
@@ -41389,10 +41400,9 @@ document.addEventListener("click", (e) => {
   vConta = function () {
     let t = e();
     if (!window.CLOUD_OK || !cfg() || RECOV) return t;
-    SESS &&
-      !SYS.busy &&
-      Date.now() - SYS.em > 6 * 36e5 &&
-      setTimeout(() => sysTesta(!0), 50);
+    /* v1054 (Etapa 2): sem teste automático das ~14 Edge Functions ao abrir a Conta.
+       Eram chamadas ao Supabase a cada 6 h por aparelho (6 delas davam 404).
+       O teste continua no botão "Status do sistema". */
     const a = sysProblemas().length,
       o = `<button class="btn s" style="margin-top:8px;width:100%" data-a="gotab" data-id="status">🩺 Status do sistema${a ? ` · <span class="am">${a} com problema</span>` : ""}</button>`;
     return t.replace(
@@ -60838,26 +60848,31 @@ const dshN = (e, t = 2) =>
           : dshN(t, 0))
     );
   };
+/* v1054: um trade → registro do Dashboard (usado também por "Onde você ganha e onde perde"). */
+function dshRegistro(t) {
+  const a = calc(t);
+  if (a.pl == null) return null;
+  const o = String(t.dt || ""),
+    s = String(t.dtx || t.dt).slice(0, 10);
+  return {
+    d: s,
+    de: o.slice(0, 10) || s,
+    h: /T\d\d/.test(o) ? +o.slice(11, 13) : null,
+    v: emBRL(a.pl, moedaT(t)),
+    r: a.r != null && isFinite(a.r) ? a.r : null,
+    setup: String(t.setup || "").trim() || "Sem setup",
+    at: String(raizAtivo(t.ativo) || t.ativo || "?").toUpperCase(),
+    us: ehUS(t),
+    emo: t.emo2 || "",
+    ok: t.rules === "s",
+    err: t.err && t.err !== "Nenhum" ? t.err : "",
+  };
+}
 function dshTodas() {
   const e = [];
   S.trades.forEach((t) => {
-    const a = calc(t);
-    if (a.pl == null) return;
-    const o = String(t.dt || ""),
-      s = String(t.dtx || t.dt).slice(0, 10);
-    e.push({
-      d: s,
-      de: o.slice(0, 10) || s,
-      h: /T\d\d/.test(o) ? +o.slice(11, 13) : null,
-      v: emBRL(a.pl, moedaT(t)),
-      r: a.r != null && isFinite(a.r) ? a.r : null,
-      setup: String(t.setup || "").trim() || "Sem setup",
-      at: String(raizAtivo(t.ativo) || t.ativo || "?").toUpperCase(),
-      us: ehUS(t),
-      emo: t.emo2 || "",
-      ok: t.rules === "s",
-      err: t.err && t.err !== "Nenhum" ? t.err : "",
-    });
+    const r = dshRegistro(t);
+    r && e.push(r);
   });
   try {
     lcItems().forEach((t) => {
@@ -61474,6 +61489,7 @@ function vDash() {
     p = typeof mmDash == "function" ? mmDash() : "";
   return `<div id="dshw"><div class="top" style="align-items:center;gap:8px"><h1 style="margin:0">Dashboard</h1><div class="dshx"><button class="btn s" data-dshx="img">Imagem</button><button class="btn s" data-dshx="pdf">PDF</button></div></div>
 <div class="sm mut" style="margin:4px 0 10px">${a.nome}${DSH.m !== "all" ? " · " + (DSH.m === "us" ? "EUA" : "Brasil") : ""}${DSH.s ? " · setup " + esc(DSH.s) : ""}${DSH.a ? " · " + esc(DSH.a) : ""} · em R$ (US$ convertido)${a.cmp && n && n.n ? " · as setas comparam com " + a.cmp : ""}</div>
+${window.DiarioOndeGanho ? window.DiarioOndeGanho.html(o) : ""}
 <div class="dshf">${l("p", [
     ["30", "30 dias"],
     ["90", "90 dias"],
@@ -71231,6 +71247,20 @@ function cqIntervaloV1022(aba,agora=Date.now()){
   return 30000;
 }
 const cqControllersV1022=new Map(),cqPedidosV1030=new Map();
+/* Etapa 1 (v1054): na rolagem, o contínuo do TradingView (WDO1!, WIN1!…) mede a
+   variação contra o ajuste de OUTRO vencimento (ex.: WDO −4% com dólar à vista −2,35%).
+   Se o futuro diverge do ativo à vista em mais de 1 p.p., o preço fica e a variação
+   vira "—" com status "rolagem", em vez de exibir um número falso. */
+const CQ_ROLAGEM_V1054={WDO:"BRL=X",DOL:"BRL=X",WIN:"^BVSP",IND:"^BVSP"};
+function cqRolagemV1054(n){
+  for(const it of n?.itens||[]){
+    const ref=CQ_ROLAGEM_V1054[it?.c];if(!ref||!Number.isFinite(+it.d1)||it.d1===null)continue;
+    let base=null;try{base=window.DiarioMarketData?.get(ref)?.d1;}catch(_){}
+    if(!Number.isFinite(+base)||base===null)continue;
+    if(Math.abs(+it.d1-+base)>1){it.d1=null;it.dabs=null;it.quoteStatus="rolagem";it.baseVariacao="Variação omitida: ajuste anterior de outro vencimento (rolagem do contrato contínuo)";}
+  }
+  return n;
+}
 function cqCancelarV1022(){
   for(const ctl of cqControllersV1022.values())ctl.abort();
 }
@@ -71254,6 +71284,7 @@ function cqCarrega(e,t){
       const n=await r.json().catch(()=>({}));
       if(ctl.signal.aborted)return;
       if(!r.ok||!Array.isArray(n.itens)||(!n.itens.length&&CQ.d[e]?.itens?.length))throw new Error(n.error||n.erro||"Cloudflare: cotação indisponível ("+r.status+")");
+      cqRolagemV1054(n);
       CQ.d[e]=n;CQ.ts[e]=Date.now();CQ.err="";CQ.errors[e]="";
       return n;
     }catch(o){
@@ -73244,9 +73275,23 @@ function m623Linha(it) {
     logo = window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(chave, 16)) : "";
   return `<div class="m623-r" data-market-symbol="${esc(it.s || it.k)}"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
 }
-function m623Bloco(tit, itens, extra = "") {
-  return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : '<div class="market-state" role="status">Consultando…</div>'}</div></section>`;
+/* v1054: lista vazia só diz "Consultando…" enquanto há consulta em andamento. Com falha
+   (ex.: Mesa Macro sem login), mostra o motivo e um botão para tentar de novo. */
+function m623Vazio() {
+  if (M606.busy || (!M606.err && !M606.ts)) return '<div class="market-state" role="status">Consultando…</div>';
+  const motivo = M606.err || "A fonte não trouxe dados agora.";
+  const login = /Entre na sua conta/i.test(motivo);
+  return `<div class="market-state market-state-err" role="status"><span>${esc(motivo)}</span>${login ? '<button type="button" class="btn s" data-dt414-go="conta">Entrar</button>' : '<button type="button" class="btn s" data-m606-retry="1">Tentar de novo</button>'}</div>`;
 }
+function m623Bloco(tit, itens, extra = "") {
+  return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : m623Vazio()}</div></section>`;
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest?.("[data-m606-retry]")) return;
+  e.preventDefault();
+  try { m606Carrega(true); } catch {}
+  try { m606Repinta(); } catch {}
+});
 function m623Noticias() {
   try {
     !MKT.items && !MKT.busy && Date.now()-MKT.ts>=18e4 && typeof SESS < "u" && SESS && setTimeout(() => mkLoad(false), 0);
@@ -81937,7 +81982,7 @@ function verVelhas() {
     e.apply(this, arguments);
     try {
       if (tab !== "home") return;
-      setTimeout(() => verChecar(!1), 1500);
+      /* v1054 (Etapa 2): checagem de versão das funções no Supabase só sob demanda. */
       const t = verVelhas(),
         a = document.getElementById("app");
       if (!t.length || !a || a.querySelector("#verav")) return;
@@ -98091,7 +98136,7 @@ Dados do terminal agora:
       ["IBOV", "BMFBOVESPA:IBOV", 0, "IBOV"],
       ["Dólar", "FX_IDC:USDBRL", 4, "USDBRL"],
       ["S&P 500", "SP:SPX", 2, "SPX"],
-      ["Nasdaq", "NASDAQ:NDX", 2, "NDX"],
+      ["Nasdaq 100", "NASDAQ:NDX", 2, "NDX"],
       ["Bitcoin", "BINANCE:BTCUSDT", 0, "BTCUSD"],
       ["Brent", "TVC:UKOIL", 2, ""],
       ["DXY", "TVC:DXY", 2, ""],

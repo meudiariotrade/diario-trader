@@ -1,23 +1,23 @@
 # CLAUDE.md — Regras de Arquitetura e Design System (Diário de Trader)
 
-## 1. Identidade Visual e Estética (Anti-AI Slop)
-Este aplicativo é uma ferramenta profissional de mesa proprietária e gestão de risco. Abandone qualquer estética de template genérico:
-- **Superfícies Planas (Flat High-Density):** Nunca crie cartões com bordas dentro de outros cartões com bordas. Separe blocos de informação usando diferença sutil de fundo e linhas divisórias finas (`1px solid #1E232E`).
-- **Paleta de Cores Institucional (v828, escuro — todas as abas menos o Terminal):**
-  - Fundo Base: `#08090D`
-  - Sidebar, Topbar e Ticker: `#0C0E14`
-  - Cards principais: `#12151E` com borda `1px solid rgba(255,255,255,0.06)`
-  - Sub-cards e Hover: `#181C28`
-  - Destaque (Âmbar) — só no CTA principal, indicador da aba ativa e micro-detalhes: `#F59E0B`
-  - Texto: números principais `#FFFFFF`, títulos `#E2E8F0`, rótulos `#64748B`
-  - Gain / Positivo: `#10B981` · Loss / Risco Crítico: `#EF4444` (só para variações financeiras)
-  - Tokens no código: `--ui-*` (src/app-theme.css); componentes base em `src/shared/ui-base.js` (DiarioUI).
-  - **Terminal:** mantém a paleta original (`#0A0C10`, `#11141B`, `#181C26`, `#1E232E`, `#D4A017`) e não deve ser alterado.
-- **Geometria:** Utilize `border-radius` máximo de `4px` ou `6px`. Mantenha paddings compactos para alta densidade de dados sem rolagem excessiva.
-- **Proibições Estritas:**
+## 1. Identidade Visual — Liquid Glass 3D (escolha do dono do app, v1054)
+Ferramenta profissional de mesa proprietária e gestão de risco, com acabamento **Liquid Glass 3D**: superfícies de vidro translucidas sobre uma luz ambiente suave, profundidade discreta e um único âmbar de ação. Tokens `--lg-*` no fim de `src/app-theme.css` (camada "Etapa 4"); nada de estilos soltos por tela.
+- **Níveis (nunca vidro dentro de vidro):**
+  - **Ambiente:** fundo `#08090D` com brilhos radiais fixos de baixa opacidade (âmbar, índigo, verde). Sem imagens.
+  - **L1 — cartão principal:** `--lg-l1` (rgba(20,24,36,.56)) + `backdrop-filter: saturate(160%) blur(18px)`, borda `1px` `--lg-stroke` com **borda superior mais clara** (`--lg-stroke-hi`, reflexo de luz), brilho interno de topo e sombra suave `--lg-depth`. Raio `16px`.
+  - **L2 — sub-cartão/KPI dentro de L1:** véu `--lg-l2` (rgba(255,255,255,.035)), borda `--lg-stroke-2`, **sem desfoque e sem sombra**. Raio `12px`.
+  - **Barras do app** (ticker, cabeçalho, barra lateral, barra inferior, menu): `--lg-chrome` (rgba(9,11,17,.86)) + `blur(24px)`. O texto que passa por trás não pode competir com ícones e rótulos.
+  - **Contêineres de página** (`.v4-panel`, `.dt393-workspace`) não têm superfície própria.
+- **Âmbar único:** ação principal em âmbar líquido (`#FBBF24 → #F59E0B`, texto `#1B1204`, reflexo interno). Seleção (aba/segmento ativo) em **véu âmbar** translúcido. Âmbar não é decoração.
+- **Texto:** números principais `#FFFFFF`, títulos `#E2E8F0`, rótulos `#64748B`. Gain `#10B981` / Loss `#EF4444` só para variações financeiras.
+- **Geometria:** cartão `16px`, sub-cartão `12px`, controle `10px`, pílulas `999px` só em chips e segmentos. Paddings compactos (alta densidade).
+- **Acessibilidade e desempenho:** fallback sólido (`--lg-l1-solid`) sem suporte a `backdrop-filter` e com `prefers-reduced-transparency`. Desfoque só em L1 e nas barras (nunca em listas longas ou L2).
+- **Terminal:** mantém a paleta original (`#0A0C10`, `#11141B`, `#181C26`, `#1E232E`, `#D4A017`), sem vidro. O tema claro também não usa vidro.
+- **Proibições:**
   - NUNCA use botões flutuantes (FAB) cobrindo conteúdo na tela.
-  - NUNCA use gradientes neon, sombras pesadas (`box-shadow`) ou imagens genéricas de candles como placeholder.
-  - NUNCA exiba textos vazios como "Sem preço ainda"; use sempre o último fechamento salvo no banco acompanhado da badge `FECHADO`.
+  - NUNCA use neon, brilhos saturados, sombras duras/escuras grandes ou imagens genéricas de candles como placeholder.
+  - NUNCA exiba textos vazios como "Sem preço ainda"; use o último fechamento salvo com a badge `FECHADO`.
+  - NUNCA crie um novo tom de dourado/âmbar ou um novo raio fora dos tokens.
 
 ## 2. Tipografia Financeira e Alinhamento
 - **Números Tabulares:** Todo e qualquer dado numérico (preços, R$, porcentagens, horários, strikes, contagem regressiva) DEVE usar `font-variant-numeric: tabular-nums` para evitar deslocamento horizontal durante atualizações.

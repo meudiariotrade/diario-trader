@@ -2190,11 +2190,17 @@ function vStats() {
     );
   let f = "";
   if (ST.aba === "geral") {
+    /* v1054: "Onde você ganha e onde perde" com os trades do período/tipo escolhidos. */
+    let og1054 = "";
+    try {
+      if (window.DiarioOndeGanho && typeof dshRegistro === "function")
+        og1054 = window.DiarioOndeGanho.html(n.rows.map(dshRegistro).filter(Boolean));
+    } catch {}
     const x = n.dias.slice(-20);
     let v = -1 / 0;
     const g = n.curvaPL.map((b) => ((v = Math.max(v, b)), b - v)),
       h = n.rows.slice(-30);
-    f = `<h2>Evolução do resultado</h2>${lineChart("eq", n.curvaPL, m, (b) => s(b))}<h2>Recuos da conta</h2>${lineChart("dd", g, m, (b) => o(b))}<div class="sm mut">Quanto o resultado acumulado caiu em relação ao melhor momento anterior.</div><h2>Resultado por dia</h2>${barChart(
+    f = og1054 + `<h2>Evolução do resultado</h2>${lineChart("eq", n.curvaPL, m, (b) => s(b))}<h2>Recuos da conta</h2>${lineChart("dd", g, m, (b) => o(b))}<div class="sm mut">Quanto o resultado acumulado caiu em relação ao melhor momento anterior.</div><h2>Resultado por dia</h2>${barChart(
       "dia",
       x.map((b) => b.pl),
       x.map((b) => b.k.slice(8) + "/" + b.k.slice(5, 7)),

@@ -2909,6 +2909,20 @@ function cqIntervaloV1022(aba,agora=Date.now()){
   return 30000;
 }
 const cqControllersV1022=new Map(),cqPedidosV1030=new Map();
+/* Etapa 1 (v1054): na rolagem, o contínuo do TradingView (WDO1!, WIN1!…) mede a
+   variação contra o ajuste de OUTRO vencimento (ex.: WDO −4% com dólar à vista −2,35%).
+   Se o futuro diverge do ativo à vista em mais de 1 p.p., o preço fica e a variação
+   vira "—" com status "rolagem", em vez de exibir um número falso. */
+const CQ_ROLAGEM_V1054={WDO:"BRL=X",DOL:"BRL=X",WIN:"^BVSP",IND:"^BVSP"};
+function cqRolagemV1054(n){
+  for(const it of n?.itens||[]){
+    const ref=CQ_ROLAGEM_V1054[it?.c];if(!ref||!Number.isFinite(+it.d1)||it.d1===null)continue;
+    let base=null;try{base=window.DiarioMarketData?.get(ref)?.d1;}catch(_){}
+    if(!Number.isFinite(+base)||base===null)continue;
+    if(Math.abs(+it.d1-+base)>1){it.d1=null;it.dabs=null;it.quoteStatus="rolagem";it.baseVariacao="Variação omitida: ajuste anterior de outro vencimento (rolagem do contrato contínuo)";}
+  }
+  return n;
+}
 function cqCancelarV1022(){
   for(const ctl of cqControllersV1022.values())ctl.abort();
 }
@@ -2932,6 +2946,7 @@ function cqCarrega(e,t){
       const n=await r.json().catch(()=>({}));
       if(ctl.signal.aborted)return;
       if(!r.ok||!Array.isArray(n.itens)||(!n.itens.length&&CQ.d[e]?.itens?.length))throw new Error(n.error||n.erro||"Cloudflare: cotação indisponível ("+r.status+")");
+      cqRolagemV1054(n);
       CQ.d[e]=n;CQ.ts[e]=Date.now();CQ.err="";CQ.errors[e]="";
       return n;
     }catch(o){
@@ -4922,9 +4937,23 @@ function m623Linha(it) {
     logo = window.DiarioLogos ? cqLogoHtml(DiarioLogos.html(chave, 16)) : "";
   return `<div class="m623-r" data-market-symbol="${esc(it.s || it.k)}"${vivo === "bnc" ? ` data-bnc="${esc(it.k)}"` : vivo === "fh" ? ` data-fh="${esc(fhSym(it.k, it.g))}"` : ""} role="row" tabindex="0" data-tv="${esc(m624Tv(it))}" data-nome="${esc(it.k + (it.n ? " · " + it.n : ""))}" title="Abrir gráfico"><span class="m623-n" role="cell">${logo}<b>${esc(it.k)}</b><small>${esc(it.n || "")}</small></span><span class="m623-v" role="cell"><b class="m623-px">${px == null ? "–" : cqNum(px, it.dp ?? 2) + (juro ? "%" : "")}</b><span class="m623-d ${varCls}">${varTxt}</span><time>${m623Hms(em)}</time><i class="m623-dot ${ab ? "on" : ""}" role="img" aria-label="${ab ? "Mercado aberto" : "Mercado fechado"}"></i></span></div>`;
 }
-function m623Bloco(tit, itens, extra = "") {
-  return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : '<div class="market-state" role="status">Consultando…</div>'}</div></section>`;
+/* v1054: lista vazia só diz "Consultando…" enquanto há consulta em andamento. Com falha
+   (ex.: Mesa Macro sem login), mostra o motivo e um botão para tentar de novo. */
+function m623Vazio() {
+  if (M606.busy || (!M606.err && !M606.ts)) return '<div class="market-state" role="status">Consultando…</div>';
+  const motivo = M606.err || "A fonte não trouxe dados agora.";
+  const login = /Entre na sua conta/i.test(motivo);
+  return `<div class="market-state market-state-err" role="status"><span>${esc(motivo)}</span>${login ? '<button type="button" class="btn s" data-dt414-go="conta">Entrar</button>' : '<button type="button" class="btn s" data-m606-retry="1">Tentar de novo</button>'}</div>`;
 }
+function m623Bloco(tit, itens, extra = "") {
+  return `<section class="m623-sec"><header><h3>${tit}</h3>${extra}</header><div class="m623-tb" role="table">${itens.length ? itens.map(m623Linha).join("") : m623Vazio()}</div></section>`;
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest?.("[data-m606-retry]")) return;
+  e.preventDefault();
+  try { m606Carrega(true); } catch {}
+  try { m606Repinta(); } catch {}
+});
 function m623Noticias() {
   try {
     !MKT.items && !MKT.busy && Date.now()-MKT.ts>=18e4 && typeof SESS < "u" && SESS && setTimeout(() => mkLoad(false), 0);

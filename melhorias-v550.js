@@ -66,6 +66,9 @@
     const home = $('.v4-page.v4-home', a);
     const st = ax().guia550 ||= {};
     const semTrades = !(g(() => S.trades, []) || []).length;
+    // v1054: quem já usa o app (3+ dias de diário) não vê o guia de primeiro acesso.
+    const veterano = Object.keys(g(() => S.days, {}) || {}).length >= 3;
+    if (veterano && !st.forcar && !st.fim) { st.fim = Date.now(); salvar(); }
     let card = $('#m550-guia', a);
     if (!home || st.fim || (!semTrades && !st.forcar)) { card?.remove(); return; }
     if (!semTrades) st.trade = 1;

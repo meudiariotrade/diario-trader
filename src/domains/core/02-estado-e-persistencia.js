@@ -5477,6 +5477,8 @@ const IC = (e) =>
     const v = window.DiarioMarketData?.has(key)&&!window.DIARIO_DEMO ? live : live || n[key];
     return v && Number.isFinite(+v.px) && +v.px > 0 ? v : null;
   };
+  /* Etapa 1: preços do ticker com separador de milhar (59.719,91), igual aos cards. */
+  const pxTape = (x) => Number(x).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const i = ([key, nome]) => {
     const v = ativo(key);
     if (!v) return "";
@@ -5486,7 +5488,7 @@ const IC = (e) =>
     const classe = positivo ? "up" : "dn";
     const seta = m == null ? "" : positivo ? "▲" : "▼";
     const percentual = m == null ? "—" : (positivo ? "+" : "") + f2(m) + "%";
-    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${f2(v.px)} <b>${percentual}</b></span>`;
+    return `<span>${nome} <span class="${classe}">${seta}</span></span><span class="${classe}">${pxTape(v.px)} <b>${percentual}</b></span>`;
   };
   function l() {
     if (document.hidden) return;
@@ -7060,3 +7062,11 @@ function irExteriorHtml(ano, num) {
     : `<p class="mut sm">Nenhuma venda de ativo no exterior em ${ano}. Se vender, o ganho entra aqui: 15% na declaração anual, sem a isenção de R$ 20 mil.</p>`;
   return h;
 }
+/* v1054: Enter no e-mail ou na senha envia o login/cadastro (antes só o clique funcionava). */
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || e.isComposing) return;
+  const t = e.target;
+  if (!t || (t.id !== "ce" && t.id !== "cp")) return;
+  const b = document.querySelector('[data-a="auth"]');
+  if (b) { e.preventDefault(); b.click(); }
+});

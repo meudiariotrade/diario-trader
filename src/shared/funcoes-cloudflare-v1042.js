@@ -8,7 +8,10 @@
   if (typeof window === 'undefined' || typeof window.fetch !== 'function' || window.DiarioFuncoesCloudflare) return;
   var HOST = 'vdzwydizostutukppcsj.supabase.co';
   var WORKER = 'https://diario-trader.lucianosilva43567.workers.dev/v1/fn/';
-  var MIGRADAS = new Set(['terminal', 'mesa-macro', 'sazonal-extras', 'finnhub-token']);
+  // Fase B (v1054): o Worker responde 503 enquanto faltar alguma chave; aí o app usa a função antiga.
+  var MIGRADAS = new Set(['terminal', 'mesa-macro', 'sazonal-extras', 'finnhub-token',
+    'analise', 'resumo', 'revista-ia', 'conhecimento-ia', 'aulas', 'mesa',
+    'logos', 'series', 'screener']);
   var anterior = window.fetch.bind(window);
 
   function alvo(input) {
@@ -34,5 +37,5 @@
       return anterior(original || input, init);
     });
   };
-  window.DiarioFuncoesCloudflare = Object.freeze({ migradas: Array.from(MIGRADAS), versao: 1042 });
+  window.DiarioFuncoesCloudflare = Object.freeze({ migradas: Array.from(MIGRADAS), versao: 1054 });
 })();

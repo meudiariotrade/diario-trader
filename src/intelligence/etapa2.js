@@ -207,7 +207,10 @@
    const html=({operacoes,carteira:exposure,analises:fundamental,estudos:estudo}[route])();
    let panel=app.querySelector('[data-intel-etapa2]');
    if(panel&&panel.dataset.route!==route){panel.remove();panel=null;}
-   if(!panel){panel=painel(heading,html);panel.dataset.route=route;el.prepend(panel);}
+   if(!panel){panel=painel(heading,html);panel.dataset.route=route;
+     // v1054: no celular o radar da Carteira vem depois do conteúdo principal (antes ele abria a tela).
+     const depois=route==='carteira'&&w.matchMedia?.('(max-width: 767px)').matches;
+     depois?el.append(panel):el.prepend(panel);}
    else {const node=panel.querySelector('[data-intel-2-content]');if(node.innerHTML!==html)node.innerHTML=html;}
    if(changed){
      if(route==='carteira'||route==='analises'){obterMetricas();obterEventos();}

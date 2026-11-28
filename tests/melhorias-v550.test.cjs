@@ -30,7 +30,9 @@ test('v550: destaque WIN/WDO, análises recolhidas, guia de 3 passos, continuar 
  await p.evaluate(()=>{MKT.tab='nt';render()});
  await app.locator('[data-m550-jornal="jornal"]').click();
  await expect.poll(()=>p.evaluate(()=>MKT.tab)).toBe('jr');
- await p.evaluate(()=>{S.trades=[];S.ax.guia550={};tab='home';render()});
+ await p.evaluate(()=>{S.ax.guia550={fim:1};S.days={a:{},b:{},c:{}};tab='home';render()});
+ await expect(app.locator('#m550-guia'),'v1054: quem já tem dias de diário não vê o guia').toHaveCount(0);
+ await p.evaluate(()=>{S.trades=[];S.days={[Object.keys(S.days)[0]||'2026-01-02']:Object.values(S.days)[0]||{}};S.del={};S.ax.guia550={};tab='home';render()});
  await expect(app.locator('#m550-guia li')).toHaveCount(3);
  await app.locator('[data-m550-passo="setup"]').click();
  await expect.poll(()=>p.evaluate(()=>tab)).toBe('regras');

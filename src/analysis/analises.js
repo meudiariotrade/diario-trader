@@ -213,7 +213,11 @@
   if(!br)return '<section class="an-section an-briefing"><p class="mut">Carregando levantamento automático do mercado…</p></section>';
   const isTec=id==='livermore';
   const fPx=v=>v==null?'—':'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const listHtml=(items,verb,tone)=>items.length?items.map(x=>'<div class="an-br-item '+tone+'"><div class="an-br-l"><b>'+logos([x.ticker],18)+'<span>'+E(x.ticker)+'</span></b><small>'+E(x.setor)+' · '+fPx(x.preco)+'</small><p>'+E(x.motivo)+'</p></div><button type="button" class="btn s" data-an-br-cmd="'+verb+' '+E(x.ticker)+'">'+(verb==='TÉCNICO'?'Técnico':'Dossiê')+'</button></div>').join(''):'<p class="mut">Nenhum destaque neste critério agora.</p>';
+  /* Etapa 1: o mesmo ativo não pode ter dois preços sem explicação. Usa a cotação viva
+     (a mesma do ticker); sem ela, mostra o preço do snapshot com a data da referência. */
+  const refDia=(()=>{const t=Date.parse(br.ref||'');return Number.isFinite(t)?new Date(t).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'America/Sao_Paulo'}):'';})();
+  const pxAtivo=x=>{let q=null;try{q=w.DiarioMarketData?.get(x.ticker);}catch(_){}return q&&q.px>0?fPx(q.px):fPx(x.preco)+(x.preco!=null?' · ref.'+(refDia?' '+refDia:''):'');};
+  const listHtml=(items,verb,tone)=>items.length?items.map(x=>'<div class="an-br-item '+tone+'"><div class="an-br-l"><b>'+logos([x.ticker],18)+'<span>'+E(x.ticker)+'</span></b><small>'+E(x.setor)+' · '+pxAtivo(x)+'</small><p>'+E(x.motivo)+'</p></div><button type="button" class="btn s" data-an-br-cmd="'+verb+' '+E(x.ticker)+'">'+(verb==='TÉCNICO'?'Técnico':'Dossiê')+'</button></div>').join(''):'<p class="mut">Nenhum destaque neste critério agora.</p>';
   const topTks=(isTec?br.livermore.alta:br.graham.avaliar).slice(0,3).map(x=>x.ticker);
   const fullCmd=isTec?(topTks[0]?'TÉCNICO '+topTks[0]:'TÉCNICO PETR4'):(topTks.length>=2?'COMPARE '+topTks.join(' '):'ANALISE '+(topTks[0]||'PETR4'));
   const fsBtn=(id==='livermore'||id==='munger')?'<button type="button" class="btn s" data-an-aurea-prompt="@'+id+' Aplique o Fear-Setting (Tim Ferriss: 1. Definir pior cenário 1-10, 2. Prevenir, 3. Reparar, 4. Custo da inação) para o destaque de hoje: '+E(topTks[0]||'PETR4')+'">Fear-Setting ('+(id==='livermore'?'Livermore':'Munger')+')</button>':'';
