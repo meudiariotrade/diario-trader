@@ -100,5 +100,5 @@ export async function debateV1013(request,env,deps={}){
  let raw;try{raw=JSON.parse(gen.text)?.resultado}catch{}
  const resultado=validar(raw);
  if(!resultado)return json({erro:'Resposta da rodada incompatível'},502);
- return json({ok:true,modo,resultado,fundamentos_v1014:perfis,commodities_v1015:commodities,renda_fixa_v1016:rf});
+ return json({ok:true,modo,resultado,modelo:txt(gen.model,100),fundamentos_v1014:perfis,commodities_v1015:commodities,renda_fixa_v1016:rf});
 }
